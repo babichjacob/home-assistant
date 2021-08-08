@@ -1,0 +1,12 @@
+{
+	"domain": "custom_backend",
+	"name": "My Custom Backend: Code Generation, Services and Automations",
+	"version": "2021.08.07.00",
+	"documentation": "https://github.com/babichjacob/home-assistant",
+	"dependencies": [],
+	"codeowners": [
+		"@babichjacob"
+	],
+	"requirements": [],
+	"iot_class": "local_push"
+}

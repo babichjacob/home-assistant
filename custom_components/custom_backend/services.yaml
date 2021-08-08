@@ -1,0 +1,3 @@
+generate_code:
+  description: "Runs the code generator"
+  fields: {}
