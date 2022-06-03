@@ -19,8 +19,6 @@ from custom_components.custom_backend.const import (
 )
 
 async def get_garage_doors(**kwds):
-	secrets = kwds["secrets"]
-
 	garage_doors = {
 		"garage_door": {
 			DATA_ROOM_WITH_LIMITED_ACCESS: ROOM_DRIVEWAY,
