@@ -2,6 +2,8 @@
 
 from datetime import time, timedelta
 
+from parse import compile as parse_compile
+
 from custom_components.custom_backend.const import (
 	COMPUTER_JACOB_S_DESKTOP,
 	COMPUTER_JACOB_S_SCHOOL_LAPTOP,
@@ -17,9 +19,11 @@ from custom_components.custom_backend.const import (
 	DATA_LEISURE,
 	DATA_LOCK_SLOTS,
 	DATA_NICKNAME,
+	DATA_PEOPLE,
 	DATA_PERSON,
 	DATA_PHONES,
 	DATA_PHOTO,
+	DATA_SECRETS,
 	DATA_SHORT_NAME,
 	DATA_SLEEP_DURATION,
 	DATA_TABLETS,
@@ -37,6 +41,8 @@ from custom_components.custom_backend.const import (
 	PERSON_JORDAN,
 	PERSON_JUSTIN,
 	PERSON_MATT,
+	PHONE_GALAXY_S21_ULTRA_1,
+	PHONE_GLORIA_S_IPHONE_XR,
 	PHONE_JACOB_S_HTC_U11,
 	PHONE_JENNA_S_IPHONE_XR,
 	PHONE_MATT_S_ONEPLUS_8,
@@ -47,8 +53,8 @@ from custom_components.custom_backend.const import (
 )
 
 
-def get_people(**kwds):
-	secrets = kwds["secrets"]
+async def get_people(**kwds):
+	secrets = kwds[DATA_SECRETS]
 
 	def get_person(slug):
 		return {
@@ -60,17 +66,13 @@ def get_people(**kwds):
 		}
 
 	person_slugs = set()
-
+	person_slug_matcher = parse_compile(f"{DATA_PERSON}_{{person_slug}}_{DATA_FULL_NAME}")
 	for key in secrets:
-		prefix = DATA_PERSON + "_"
-		if not key.startswith(prefix):
+		person_slug_match = person_slug_matcher.parse(key)
+		if person_slug_match is None:
 			continue
-
-		suffix = "_" + DATA_FULL_NAME
-		if not key.endswith(suffix):
-			continue
-
-		person_slugs.add(key[len(prefix):-len(suffix)])
+		person_slugs.add(person_slug_match.named["person_slug"])
+	
 	
 	people_without_customizations = {
 		person_slug: get_person(person_slug) for person_slug in person_slugs
@@ -78,6 +80,11 @@ def get_people(**kwds):
 
 	customizations = {
 		PERSON_BAKA: {
+			DATA_ALARM: {
+				DATA_LEISURE: time(hour=8, minute=0),
+				DATA_SLEEP_DURATION: timedelta(hours=10),
+				DATA_WIND_DOWN_BEFORE_FALLING_ASLEEP_DURATION: timedelta(hours=2),
+			},
 			DATA_HOME: ZONE_BAKA_S_HOUSE,
 		},
 		PERSON_GARY: {
@@ -88,19 +95,20 @@ def get_people(**kwds):
 		},
 		PERSON_GLORIA: {
 			DATA_HOME: ZONE_GLORIA_S_HOUSE,
+			DATA_PHONES: {PHONE_GLORIA_S_IPHONE_XR},
 		},
 		PERSON_JACKSON: {
 			DATA_HOME: ZONE_GARY_S_HOUSE,
 		},
 		PERSON_JACOB: {
 			DATA_ALARM: {
-				DATA_LEISURE: time(hour=11, minute=40),
+				DATA_LEISURE: time(hour=10),
 				DATA_SLEEP_DURATION: timedelta(hours=8),
-				DATA_WIND_DOWN_BEFORE_FALLING_ASLEEP_DURATION: timedelta(hours=1, minutes=30),
+				DATA_WIND_DOWN_BEFORE_FALLING_ASLEEP_DURATION: timedelta(hours=1, minutes=30), # TODO: make use of (bedtime notification)
 			},
 			DATA_COMPUTERS: {COMPUTER_JACOB_S_DESKTOP, COMPUTER_JACOB_S_SCHOOL_LAPTOP},
 			DATA_HOME: ZONE_BAKA_S_HOUSE,
-			DATA_PHONES: {PHONE_JACOB_S_HTC_U11},
+			DATA_PHONES: {PHONE_GALAXY_S21_ULTRA_1, PHONE_JACOB_S_HTC_U11},
 		},
 		PERSON_JENNA: {
 			DATA_HOME: ZONE_BAKA_S_HOUSE,
@@ -140,7 +148,7 @@ def get_people(**kwds):
 
 
 async def generate_yaml(**kwds):
-	people = kwds["people"]
+	people = kwds[DATA_PEOPLE]
 
 	return {
 		DOMAIN_PERSON: [
@@ -154,8 +162,8 @@ async def generate_yaml(**kwds):
 	}
 
 
-def exposed_devices(**kwds):
-	people = kwds["people"]
+async def exposed_devices(**kwds):
+	people = kwds[DATA_PEOPLE]
 
 	return {
 		f"{DOMAIN_PERSON}.{person_slug}": {
@@ -166,7 +174,7 @@ def exposed_devices(**kwds):
 
 
 async def customize(**kwds):
-	people = kwds["people"]
+	people = kwds[DATA_PEOPLE]
 
 	return {
 		f"{DOMAIN_PERSON}.{person_slug}": {
