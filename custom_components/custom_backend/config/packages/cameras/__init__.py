@@ -1,6 +1,9 @@
 "Registered all the cameras with the home automation and security system"
 
+from parse import compile as parse_compile
+
 from custom_components.custom_backend.const import (
+	ATTR_ENTITY_PICTURE,
 	ATTR_FRIENDLY_NAME,
 	ATTR_ICON,
 	CONF_EXTRA_ARGUMENTS,
@@ -10,17 +13,23 @@ from custom_components.custom_backend.const import (
 	DATA_CAMERA,
 	DATA_FULL_NAME,
 	DATA_GARAGE_DOORS,
+	DATA_ICON,
 	DATA_IN_VIEW,
 	DATA_LIGHTS,
 	DATA_LOCKS,
 	DATA_NICKNAME,
 	DATA_ROOM,
+	DATA_SECRETS,
 	DATA_STREAM_SOURCE,
+	DATA_UNIFI_DEVICE_TRACKER_SLUG,
 	DATA_VIDEO_QUALITY,
+	DATA_WYZE,
 	DATA_ZONE,
 	DOMAIN_CAMERA,
+	DOMAIN_DEVICE_TRACKER,
 	GARAGE_DOOR_GARAGE_DOOR,
 	ICON_MDI_CCTV,
+	IMAGE_WYZE_LOGO,
 	LIGHT_PORCH,
 	LOCK_FRONT_DOOR,
 	PLATFORM_FFMPEG,
@@ -32,10 +41,10 @@ from custom_components.custom_backend.const import (
 	ROOM_KITCHEN,
 	ZONE_BAKA_S_HOUSE,
 )
-from custom_components.custom_backend.utils import slugify
+
 
 async def get_cameras(**kwds):
-	secrets = kwds["secrets"]
+	secrets = kwds[DATA_SECRETS]
 
 	def get_camera(slug):
 		return {
@@ -43,17 +52,13 @@ async def get_cameras(**kwds):
 		}
 
 	camera_slugs = set()
-
+	camera_slug_matcher = parse_compile(f"{DATA_CAMERA}_{{camera_slug}}_{DATA_STREAM_SOURCE}")
 	for key in secrets:
-		prefix = DATA_CAMERA + "_"
-		if not key.startswith(prefix):
+		camera_slug_match = camera_slug_matcher.parse(key)
+		if camera_slug_match is None:
 			continue
 
-		suffix = "_" + DATA_STREAM_SOURCE
-		if not key.endswith(suffix):
-			continue
-
-		camera_slugs.add(key[len(prefix):-len(suffix)])
+		camera_slugs.add(camera_slug_match.named["camera_slug"])
 	
 	basic_cameras = {
 		camera_slug: get_camera(camera_slug) for camera_slug in camera_slugs
@@ -106,19 +111,19 @@ async def get_cameras(**kwds):
 		} for camera_slug in basic_cameras
 	}
 
-	for camera_data in cameras.values():
+	for camera_slug, camera_data in cameras.items():
 		camera_data.setdefault(DATA_NICKNAME, camera_data[DATA_ROOM])
 		camera_data.setdefault(DATA_FULL_NAME, f"{camera_data[DATA_NICKNAME]} Camera")
+		camera_data.setdefault(DATA_ICON, ICON_MDI_CCTV)
 		camera_data.setdefault(DATA_IN_VIEW, {})
 		camera_data[DATA_IN_VIEW].setdefault(DATA_GARAGE_DOORS, set())
 		camera_data[DATA_IN_VIEW].setdefault(DATA_LIGHTS, set())
 		camera_data[DATA_IN_VIEW].setdefault(DATA_LOCKS, set())
+		camera_data.setdefault(DATA_UNIFI_DEVICE_TRACKER_SLUG, f"{DATA_CAMERA}_{DATA_WYZE}_{camera_slug}")
 		camera_data.setdefault(DATA_VIDEO_QUALITY, 5)
 		camera_data.setdefault(DATA_ZONE, ZONE_BAKA_S_HOUSE)
 
-	# TODO: wait until I've cleaned up the All Entities dashboard of unrelated and other loose things such that I rarely need to open it (and load all the cameras, crashing the network)
 	return cameras
-	# return {}
 
 
 async def generate_yaml(**kwds):
@@ -126,6 +131,7 @@ async def generate_yaml(**kwds):
 
 	ffmpeg_cameras = [
 		{
+			# TODO: is this doing anything???
 			CONF_EXTRA_ARGUMENTS: f'-q:v {camera_data[DATA_VIDEO_QUALITY]}',
 			CONF_INPUT: f'-rtsp_transport udp -analyzeduration 1000000 -probesize 1000000 -i {camera_data[DATA_STREAM_SOURCE]}',
 			CONF_NAME: camera_slug,
@@ -144,10 +150,19 @@ async def customize(**kwds):
 	customize_ffmpeg_cameras = {
 		f"{DOMAIN_CAMERA}.{camera_slug}": {
 			ATTR_FRIENDLY_NAME: camera_data[DATA_FULL_NAME],
-			ATTR_ICON: ICON_MDI_CCTV,
+			ATTR_ICON: camera_data[DATA_ICON],
 		} for camera_slug, camera_data in cameras.items()
+	}
+
+	customize_unifi_device_trackers = {
+		f"{DOMAIN_DEVICE_TRACKER}.{camera_data[DATA_UNIFI_DEVICE_TRACKER_SLUG]}": {
+			ATTR_ENTITY_PICTURE: IMAGE_WYZE_LOGO,
+			ATTR_FRIENDLY_NAME: f"{camera_data[DATA_FULL_NAME]} Internet Connected",
+			ATTR_ICON: camera_data[DATA_ICON],
+		} for camera_data in cameras.values()
 	}
 
 	return {
 		**customize_ffmpeg_cameras,
+		**customize_unifi_device_trackers,
 	}
