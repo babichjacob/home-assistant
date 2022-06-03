@@ -21,6 +21,7 @@ from custom_components.custom_backend.const import (
 	CONF_TYPE,
 	DATA_FULL_NAME,
 	DATA_NICKNAME,
+	DATA_PEOPLE,
 	DATA_PERSONALIZED,
 	DATA_USER_ID,
 	DOMAIN_LOCK,
@@ -33,8 +34,8 @@ from custom_components.custom_backend.const import (
 
 from custom_components.custom_backend.config.packages.locks import get_locks
 
-from .css import entities_with_label
 from .labels import get_label_lovelace_element
+from .theming import accent_color, entities_with_label
 
 def make_lock_element(lock_slug, lock_data, people):
 	people_username_to_person_slug = {
@@ -51,7 +52,7 @@ def make_lock_element(lock_slug, lock_data, people):
 
 
 async def get_locks_view(**kwds):
-	people = kwds["people"]
+	people = kwds[DATA_PEOPLE]
 
 	locks = await get_locks(**kwds)
 	
@@ -71,7 +72,7 @@ async def get_locks_view(**kwds):
 
 	locks_entities = {
 		CONF_CARD_MOD: {
-			CONF_STYLE: entities_with_label,
+			CONF_STYLE: f"{entities_with_label}{accent_color('orange')}",
 		},
 		CONF_ENTITIES: locks_entity_rows,
 		CONF_SHOW_HEADER_TOGGLE: False,
@@ -85,6 +86,5 @@ async def get_locks_view(**kwds):
 		CONF_ICON: ICON_MDI_LOCK,
 		CONF_PANEL: True,
 		CONF_PATH: "locks",
-		CONF_POPUP_CARDS: {},
 		CONF_TITLE: "Locks",
 	}

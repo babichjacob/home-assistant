@@ -2,7 +2,7 @@
 
 from custom_components.custom_backend.const import (
 	ATTR_ENTITY_PICTURE,
-	ATTR_FRIENDLY_NAME,
+	ATTR_ICON,
 	CONF_ENTITY,
 	CONF_INITIAL,
 	CONF_NAME,
@@ -13,10 +13,12 @@ from custom_components.custom_backend.const import (
 	DATA_NICKNAME, 
 	DATA_IMAGE,
 	DOMAIN_INPUT_TEXT,
+	ICON_MDI_LABEL,
 	IMAGE_GARAGE_DOOR_CLOSED_COLOR,
 	IMAGE_LIGHT_ON_COLOR,
 	IMAGE_LOCK_LOCKED_COLOR,
 	IMAGE_OPEN_WINDOW_COLOR,
+	IMAGE_SMARTPHONE_TABLET_COLOR,
 	IMAGE_SUBWOOFER_COLOR,
 	IMAGE_TV_SHOW_COLOR,
 	TYPE_CUSTOM_TEMPLATE_ENTITY_ROW,
@@ -79,6 +81,10 @@ async def get_labels(**kwds):
 		# 	DATA_NICKNAME: "People",
 		# 	DATA_IMAGE: IMAGE_TEAM_COLOR,
 		# },
+		{
+			DATA_NICKNAME: "Phones & Tablets",
+			DATA_IMAGE: IMAGE_SMARTPHONE_TABLET_COLOR,
+		},
 		# {
 		# 	DATA_NICKNAME: "Security",
 		# 	DATA_IMAGE: IMAGE_DEFENSE_COLOR,
@@ -133,11 +139,14 @@ async def get_label_lovelace_element(*, nickname, **kwds):
 	label_slug = next(label_slug for label_slug, label_data in labels.items() if label_data[DATA_NICKNAME] == nickname)
 
 	label_data = labels[label_slug]
+	return make_label_lovelace_element(f"{DOMAIN_INPUT_TEXT}.{label_slug}_{DATA_LABEL}", label_data[DATA_NICKNAME])
 
+
+def make_label_lovelace_element(entity_id, name=None):
 	return {
 		CONF_TYPE: TYPE_CUSTOM_TEMPLATE_ENTITY_ROW,
-		CONF_ENTITY: f"{DOMAIN_INPUT_TEXT}.{label_slug}_{DATA_LABEL}",
-		CONF_NAME: label_data[DATA_NICKNAME],
+		CONF_ENTITY: entity_id,
+		**({CONF_NAME: name} if name is not None else {}),
 		CONF_STATE: " ",
 	}
 
@@ -163,6 +172,7 @@ async def customize(**kwds):
 	customize_label_input_texts = {
 		f"{DOMAIN_INPUT_TEXT}.{label_slug}_{DATA_LABEL}": {
 			ATTR_ENTITY_PICTURE: label_data[DATA_IMAGE],
+			ATTR_ICON: ICON_MDI_LABEL,
 		} for label_slug, label_data in labels.items()
 	}
 

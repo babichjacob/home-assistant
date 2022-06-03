@@ -33,8 +33,8 @@ from custom_components.custom_backend.const import (
 
 from custom_components.custom_backend.config.packages.windows import get_windows
 
-from .css import entities_with_label
 from .labels import get_label_lovelace_element
+from .theming import accent_color, entities_with_label
 
 def make_window_element(window_slug, window_data):
 	return {
@@ -73,7 +73,7 @@ async def get_windows_view(**kwds):
 	
 	windows_card = {
 		CONF_CARD_MOD: {
-			CONF_STYLE: entities_with_label,
+			CONF_STYLE: f"{entities_with_label}{accent_color('blue')}",
 		},
 		CONF_ENTITIES: slider_entities,
 		CONF_SHOW_HEADER_TOGGLE: False,
@@ -87,6 +87,5 @@ async def get_windows_view(**kwds):
 		CONF_ICON: ICON_MDI_WINDOW_OPEN_VARIANT,
 		CONF_PANEL: True,
 		CONF_PATH: "windows",
-		CONF_POPUP_CARDS: {},
 		CONF_TITLE: "windows",
 	}

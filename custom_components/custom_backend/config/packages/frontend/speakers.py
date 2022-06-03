@@ -27,6 +27,7 @@ from custom_components.custom_backend.const import (
 	DATA_CHROMECAST,
 	DATA_ICON,
 	DATA_NICKNAME,
+	DATA_SLUG,
 	DOMAIN_MEDIA_PLAYER,
 	ICON_MDI_SPEAKER_WIRELESS,
 	TYPE_CUSTOM_MINI_MEDIA_PLAYER,
@@ -34,34 +35,139 @@ from custom_components.custom_backend.const import (
 	TYPE_SECTION,
 )
 
-from custom_components.custom_backend.config.packages.speakers import get_speakers, get_speakers_groups
+from custom_components.custom_backend.config.packages.speakers import get_speakers, get_speaker_groups
 
-from .css import entities_with_label, speakers_mini_media_player_style
 from .labels import get_label_lovelace_element
+from .theming import accent_color, entities_with_label, speakers_mini_media_player_style
 
 def make_speaker_mini_media_player_element(speaker_or_speaker_group_data):
 	# TODO: replace / revamp with larger, Cupertino-esque version
+	# return {
+	# 	CONF_CARD_MOD: {
+	# 		CONF_STYLE: speakers_mini_media_player_style,
+	# 	},
+	# 	CONF_ENTITY: f"{DOMAIN_MEDIA_PLAYER}.{speaker_or_speaker_group_data[DATA_CHROMECAST][DATA_SLUG]}",
+	# 	CONF_GROUP: True,
+	# 	CONF_HIDE: {
+	# 		CONF_CONTROLS: True,
+	# 		CONF_POWER: True,
+	# 		CONF_PROGRESS: True,
+	# 	},
+	# 	CONF_ICON: speaker_or_speaker_group_data[DATA_ICON],
+	# 	CONF_INFO: "scroll",
+	# 	CONF_NAME: speaker_or_speaker_group_data[DATA_NICKNAME],
+	# 	CONF_SOURCE: "icon",
+	# 	CONF_TYPE: TYPE_CUSTOM_MINI_MEDIA_PLAYER,
+	# }
 	return {
 		CONF_CARD_MOD: {
-			CONF_STYLE: speakers_mini_media_player_style,
+			CONF_STYLE: """
+				ha-card {
+					margin-bottom: 16px;
+					margin-top: 16px;
+					margin-right: 16px;
+
+					height: 8rem;
+
+					transition: unset;
+				}
+
+				.--inactive .mmp-player {
+					justify-content: center;
+				}
+
+				@media (prefers-color-scheme: light) {
+					.--inactive .mmp-player {
+						background-color: #EEEEEE;
+					}
+				}
+
+				@media (prefers-color-scheme: dark) {
+					.--inactive .mmp-player {
+						background-color: #333333;
+					}
+				}
+
+				/* todo */
+				.mmp-progress__duration {
+					opacity: 0.5;
+				}
+
+				.mmp-player {
+					--mmp-name-font-weight: 600;
+					height: 8rem;
+					display: flex;
+					flex-direction: column;
+					justify-content: space-between;
+				}
+				/*.entity__info__name {
+					font-size: 1.125rem;
+				}*/
+
+				/* mmp-progress {*/
+				.mmp__container {
+					--paper-progress-active-color: var(--primary-color) !important;
+				}
+
+				@media (prefers-color-scheme: light) {
+					.mmp-player {
+						background-color: rgba(238, 238, 238, 0.70);
+					}
+				}
+				@media (prefers-color-scheme: dark) {
+					.mmp-player {
+						background-color: rgba(51, 51, 51, 0.70);
+					}
+				}
+
+				@supports (backdrop-filter: blur(1px)) {
+					@media (prefers-color-scheme: light) {
+						.mmp-player {
+							background-color: rgba(238, 238, 238, 0.50);
+						}
+					}
+					@media (prefers-color-scheme: dark) {
+						.mmp-player {
+							background-color: rgba(51, 51, 51, 0.50);
+						}
+					}
+					.mmp-player {
+						backdrop-filter: blur(calc(0.75vw + 8px)) saturate(150%);
+					}
+				}
+
+				@supports (-webkit-backdrop-filter: blur(1px)) {
+					@media (prefers-color-scheme: light) {
+						.mmp-player {
+							background-color: rgba(238,238,238, 0.50);
+						}
+					}
+					@media (prefers-color-scheme: dark) {
+						.mmp-player {
+							background-color: rgba(51, 51, 51, 0.50);
+						}
+					}
+					.mmp-player {
+						-webkit-backdrop-filter: blur(calc(0.75vw + 8px)) saturate(150%);
+					}
+				}
+			""",
 		},
-		CONF_ENTITY: f"{DOMAIN_MEDIA_PLAYER}.{speaker_or_speaker_group_data[DATA_CHROMECAST]}",
-		CONF_GROUP: True,
+		# TODO: material?!
+		"artwork": "cover",
+		CONF_ENTITY: f"{DOMAIN_MEDIA_PLAYER}.{speaker_or_speaker_group_data[DATA_CHROMECAST][DATA_SLUG]}",
 		CONF_HIDE: {
-			CONF_CONTROLS: True,
-			CONF_POWER: True,
-			CONF_PROGRESS: True,
+			"runtime": False,
 		},
 		CONF_ICON: speaker_or_speaker_group_data[DATA_ICON],
-		CONF_INFO: "scroll",
 		CONF_NAME: speaker_or_speaker_group_data[DATA_NICKNAME],
-		CONF_SOURCE: "icon",
 		CONF_TYPE: TYPE_CUSTOM_MINI_MEDIA_PLAYER,
+		"volume_step": 5,
 	}
 
 async def get_speakers_view(**kwds):
 	speakers = await get_speakers(**kwds)
-	speaker_groups = await get_speakers_groups(**kwds)
+	speaker_groups = await get_speaker_groups(**kwds)
 	
 	mini_media_player_entities = [
 		await get_label_lovelace_element(nickname="Speakers", **kwds),
@@ -88,7 +194,7 @@ async def get_speakers_view(**kwds):
 
 	speakers_mini_media_players = {
 		CONF_CARD_MOD: {
-			CONF_STYLE: entities_with_label,
+			CONF_STYLE: f"{entities_with_label}{accent_color('lime')}",
 		},
 		CONF_ENTITIES: mini_media_player_entities,
 		CONF_SHOW_HEADER_TOGGLE: False,
@@ -102,6 +208,5 @@ async def get_speakers_view(**kwds):
 		CONF_ICON: ICON_MDI_SPEAKER_WIRELESS,
 		CONF_PANEL: True,
 		CONF_PATH: "speakers",
-		CONF_POPUP_CARDS: {},
 		CONF_TITLE: "Speakers",
 	}

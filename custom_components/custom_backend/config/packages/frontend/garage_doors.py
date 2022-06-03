@@ -27,7 +27,7 @@ from custom_components.custom_backend.const import (
 
 from custom_components.custom_backend.config.packages.garage_doors import get_garage_doors
 
-from .css import entities_with_label
+from .theming import accent_color, entities_with_label
 from .labels import get_label_lovelace_element
 
 def make_lock_element(lock_slug, lock_data):
@@ -55,7 +55,7 @@ async def get_garage_doors_view(**kwds):
 
 	garage_doors_entities = {
 		CONF_CARD_MOD: {
-			CONF_STYLE: entities_with_label,
+			CONF_STYLE: f"{entities_with_label}{accent_color('rose')}",
 		},
 		CONF_ENTITIES: garage_doors_entity_rows,
 		CONF_SHOW_HEADER_TOGGLE: False,
@@ -69,6 +69,5 @@ async def get_garage_doors_view(**kwds):
 		CONF_ICON: ICON_MDI_GARAGE,
 		CONF_PANEL: True,
 		CONF_PATH: "garage-door",
-		CONF_POPUP_CARDS: {},
 		CONF_TITLE: "Garage Door",
 	}

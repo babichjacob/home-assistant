@@ -21,6 +21,7 @@ from custom_components.custom_backend.const import (
 from .garage_doors import get_garage_doors_view
 from .lights import get_lights_view
 from .locks import get_locks_view
+from .phones_and_tablets import get_phones_and_tablets_view
 from .speakers import get_speakers_view
 from .tvs import get_tvs_view
 from .windows import get_windows_view
@@ -32,6 +33,7 @@ async def get_devices_by_type_dashboard(**kwds):
 			get_garage_doors_view(**kwds),
 			get_lights_view(**kwds),
 			get_locks_view(**kwds),
+			get_phones_and_tablets_view(**kwds),
 			get_speakers_view(**kwds),
 			get_tvs_view(**kwds),
 			get_windows_view(**kwds),
@@ -64,6 +66,14 @@ async def generate_yaml(**kwds):
 				},
 				{
 					CONF_TYPE: "module",
+					CONF_URL: "/hacsfiles/lovelace-hui-element/hui-element.js",
+				},
+				{
+					CONF_TYPE: "module",
+					CONF_URL: "/hacsfiles/lovelace-layout-card/layout-card.js",
+				},
+				{
+					CONF_TYPE: "module",
 					CONF_URL: "/hacsfiles/lovelace-slider-entity-row/slider-entity-row.js",
 				},
 				{
@@ -85,6 +95,11 @@ async def generate_yaml(**kwds):
 				{
 					CONF_TYPE: "module",
 					CONF_URL: "/local/custom-lovelace/mdx-icons/mdx-icons.js",
+				},
+				# TODO: WIP: TESTING
+				{
+					CONF_TYPE: "module",
+					CONF_URL: "/local/custom-lovelace/all-custom-elements/all-custom-elements.js",
 				},
 			],
 			CONF_DASHBOARDS: {
