@@ -4,6 +4,7 @@ from custom_components.custom_backend.const import (
 	ATTR_FRIENDLY_NAME,
 	ATTR_ICON,
 	DATA_BLUE,
+	DATA_BUTTON,
 	DATA_COMES_FROM_SWITCH,
 	DATA_CURRENT_SENSOR,
 	DATA_FULL_NAME,
@@ -24,12 +25,15 @@ from custom_components.custom_backend.const import (
 )
 
 
-from custom_components.custom_backend.config.packages.lights import (get_customize_for_electricity_sensors, get_customize_for_indicator_lights)
+from custom_components.custom_backend.config.packages.lights import (get_customize_for_property_binary_sensors, get_customize_for_property_sensors, get_customize_for_indicator_lights, get_customize_for_switch_integrated_binary_sensors, get_customize_for_switch_integrated_sensors, integrated_sensors)
 
 async def get_wax_melters(**kwds):
 	wax_melters = {
 		"wax_melter": {
 			DATA_COMES_FROM_SWITCH: {
+				DATA_BUTTON: {
+					DATA_SLUG: "plug_awp04l_1_button",
+				},
 				DATA_SLUG: "plug_awp04l_1_relay",
 			},
 			DATA_CURRENT_SENSOR: "plug_awp04l_1_current",
@@ -48,13 +52,15 @@ async def get_wax_melters(**kwds):
 
 	for wax_melter_data in wax_melters.values():
 		wax_melter_data.setdefault(DATA_COMES_FROM_SWITCH, {})
-		wax_melter_data.setdefault(DATA_CURRENT_SENSOR, None)
-		wax_melter_data.setdefault(DATA_POWER_SENSOR, None)
-		wax_melter_data.setdefault(DATA_VOLTAGE_SENSOR, None)
-		wax_melter_data.setdefault(DATA_ZONE, ZONE_BAKA_S_HOUSE)
+
+		for sensor in integrated_sensors:
+			wax_melter_data.setdefault(sensor, None)
+			wax_melter_data[DATA_COMES_FROM_SWITCH].setdefault(sensor, None)
 
 		wax_melter_data.setdefault(DATA_FULL_NAME, wax_melter_data[DATA_NICKNAME])
 		wax_melter_data.setdefault(DATA_SHORT_NAME, wax_melter_data[DATA_NICKNAME])
+
+		wax_melter_data.setdefault(DATA_ZONE, ZONE_BAKA_S_HOUSE)
 
 	return wax_melters
 
@@ -70,7 +76,10 @@ async def customize(**kwds):
 	}
 
 	return {
-		**get_customize_for_electricity_sensors(wax_melters),
 		**get_customize_for_indicator_lights(wax_melters),
+		**get_customize_for_property_binary_sensors(wax_melters),
+		**get_customize_for_property_sensors(wax_melters),
+		**get_customize_for_switch_integrated_binary_sensors(wax_melters),
+		**get_customize_for_switch_integrated_sensors(wax_melters),
 		**customize_wax_melters,
 	}
