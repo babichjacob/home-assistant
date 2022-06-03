@@ -1,13 +1,9 @@
 "Registered all the windows with the home automation and security system"
 
+from functools import partial
 from logging import getLogger
 
 from homeassistant import core
-from homeassistant.components.cover import (
-	CoverEntity,
-	SUPPORT_CLOSE,
-	SUPPORT_OPEN,
-)
 from homeassistant.helpers.event import async_track_state_change
 
 from custom_components.custom_backend.const import (
@@ -19,10 +15,14 @@ from custom_components.custom_backend.const import (
 	DATA_BLINDS,
 	DATA_FULL_NAME,
 	DATA_ICON,
+	DATA_LIGHT_LET_THROUGH,
+	DATA_ROOM,
+	DATA_SIRI,
 	ICON_MDI_BLINDS,
 	ICON_MDI_BLINDS_OPEN,
 	ICON_MDI_WINDOW_CLOSED_VARIANT,
 	ICON_MDI_WINDOW_OPEN_VARIANT,
+	ROOM_KITCHEN,
 	STATE_OPEN,
 	STATE_OPEN,
 	DATA_NICKNAME,
@@ -49,7 +49,10 @@ from custom_components.custom_backend.const import (
 	STATE_OPEN,
 	STATE_OPENING,
 	STATE_UNKNOWN,
+	WINDOW_JACOB_S_BEDROOM,
 )
+from custom_components.custom_backend.cover import CustomBackendCover
+from custom_components.custom_backend.utils import derived_store, entity_state_to_readable_store
 
 
 _LOGGER = getLogger(__name__)
@@ -69,7 +72,7 @@ async def get_windows(**kwds):
 			DATA_ROOM_WITH_FREE_ACCESS: ROOM_FRONT_ROOM,
 			DATA_ROOM_WITH_LIMITED_ACCESS: ROOM_FRONT_YARD,
 		},
-		"jacob_s_bedroom": {
+		WINDOW_JACOB_S_BEDROOM: {
 			DATA_ROOM_WITH_FREE_ACCESS: ROOM_JACOB_S_BEDROOM,
 			DATA_ROOM_WITH_LIMITED_ACCESS: ROOM_BACKYARD,
 		},
@@ -77,26 +80,56 @@ async def get_windows(**kwds):
 			DATA_ROOM_WITH_FREE_ACCESS: ROOM_JENNA_S_BEDROOM,
 			DATA_ROOM_WITH_LIMITED_ACCESS: ROOM_FRONT_YARD,
 		},
+		"kitchen": {
+			DATA_BLINDS: {
+				DATA_SHORT_NAME: "Bay Window Blinds",
+			},
+			DATA_ROOM_WITH_FREE_ACCESS: ROOM_KITCHEN,
+			DATA_ROOM_WITH_LIMITED_ACCESS: ROOM_BACKYARD,
+			DATA_SHORT_NAME: "Bay Window",
+		},
 		"matt_s_bedroom": {
 			DATA_ROOM_WITH_FREE_ACCESS: ROOM_MATT_S_BEDROOM,
 			DATA_ROOM_WITH_LIMITED_ACCESS: ROOM_BACKYARD,
 		},
 	}
 
-	for window_data in windows.values():
+	def get_light_let_through_store(outside_brightness_store, *, hass, window_slug, window_data):
+		blinds_state_store = entity_state_to_readable_store(f"{DOMAIN_COVER}.{window_slug}_{DATA_BLINDS}", hass=hass)
+
+		# TODO: include outside angle
+		def calculate_light_let_through(outside_brightness, blinds_state_object):
+			# _LOGGER.error(f"DEBUG: outside_brightness is {outside_brightness}")
+
+			if blinds_state_object.state == STATE_CLOSED:
+				return (outside_brightness**0.875)/3
+			
+			return outside_brightness
+			
+		
+		return derived_store([
+			outside_brightness_store,
+			blinds_state_store,
+		], calculate_light_let_through)
+
+
+	for window_slug, window_data in windows.items():
 		window_data.setdefault(DATA_SHORT_NAME, "Window")
 		window_data.setdefault(DATA_NICKNAME, window_data[DATA_ROOM_WITH_FREE_ACCESS])
-		window_data.setdefault(DATA_FULL_NAME, f"{window_data[DATA_NICKNAME]} Window")
+		window_data.setdefault(DATA_FULL_NAME, f"{window_data[DATA_NICKNAME]} {window_data[DATA_SHORT_NAME]}")
 		
 		window_data.setdefault(DATA_ICON, {})
 		window_data[DATA_ICON].setdefault(STATE_CLOSED, ICON_MDI_WINDOW_CLOSED_VARIANT)
 		window_data[DATA_ICON].setdefault(STATE_OPEN, ICON_MDI_WINDOW_OPEN_VARIANT)
 
+		# TODO
+		window_data.setdefault(DATA_LIGHT_LET_THROUGH, partial(get_light_let_through_store, window_slug=window_slug, window_data=window_data))
+
 		window_data.setdefault(DATA_BLINDS, {})
 		window_data[DATA_BLINDS].setdefault(DATA_ROOM_WITH_FREE_ACCESS, window_data[DATA_ROOM_WITH_FREE_ACCESS])
 		window_data[DATA_BLINDS].setdefault(DATA_SHORT_NAME, "Blinds")
-		window_data[DATA_BLINDS].setdefault(DATA_NICKNAME, window_data[DATA_BLINDS][DATA_ROOM_WITH_FREE_ACCESS])
-		window_data[DATA_BLINDS].setdefault(DATA_FULL_NAME, f"{window_data[DATA_BLINDS][DATA_NICKNAME]} Blinds")
+		window_data[DATA_BLINDS].setdefault(DATA_NICKNAME, window_data[DATA_NICKNAME])
+		window_data[DATA_BLINDS].setdefault(DATA_FULL_NAME, f"{window_data[DATA_BLINDS][DATA_NICKNAME]} {window_data[DATA_BLINDS][DATA_SHORT_NAME]}")
 
 		window_data[DATA_BLINDS].setdefault(DATA_ICON, {})
 		window_data[DATA_BLINDS][DATA_ICON].setdefault(STATE_CLOSED, ICON_MDI_BLINDS)
@@ -144,56 +177,7 @@ async def generate_yaml(**kwds):
 	}
 
 
-class CustomBackendCover(CoverEntity):
-	should_poll = False
 
-	supported_features = SUPPORT_OPEN | SUPPORT_CLOSE
-
-	def __init__(self):
-		self._state = None
-
-	@property
-	def available(self):
-		"""Return if the device is online."""
-		return True
-
-	@property
-	def state(self):
-		"""Return the state of the cover."""
-		if self.is_opening:
-			return STATE_OPENING
-		if self.is_closing:
-			return STATE_CLOSING
-
-		closed = self.is_closed
-
-		if closed is None:
-			return None
-		
-		if self._state == STATE_UNKNOWN:
-			return None
-
-		return STATE_CLOSED if closed else STATE_OPEN
-
-	@property
-	def is_closed(self):
-		"""Return true if cover is closed, else False."""
-		return self._state == STATE_CLOSED
-
-	@property
-	def is_closing(self):
-		"""Return if the cover is closing or not."""
-		return self._state == STATE_CLOSING
-
-	@property
-	def is_open(self):
-		"""Return if the cover is open or not."""
-		return self._state == STATE_OPEN
-
-	@property
-	def is_opening(self):
-		"""Return if the cover is opening or not."""
-		return self._state == STATE_OPENING
 
 
 def get_window_state(*, stored_value):
@@ -315,12 +299,9 @@ class Blinds(CustomBackendCover):
 
 	async def async_added_to_hass(self):
 		update_soon = lambda: self.async_schedule_update_ha_state(force_refresh=True)
-
-		def update_when_dependencies_change(entity_id, from_state, to_state):
-			update_soon()
-
 		update_soon()
-		async_track_state_change(hass=self.hass, entity_ids=[f"{DOMAIN_INPUT_SELECT}.{self._blinds_slug}_{DATA_BLINDS}"], action=update_when_dependencies_change)
+
+		async_track_state_change(hass=self.hass, entity_ids=[f"{DOMAIN_INPUT_SELECT}.{self._blinds_slug}_{DATA_BLINDS}"], action=lambda entity_id, from_state, to_state: update_soon())
 
 
 async def async_setup_platform_cover(hass: core.HomeAssistant, config: dict, async_add_entities, discovery_info=None, **kwds) -> bool:
@@ -340,3 +321,20 @@ async def async_setup_platform_cover(hass: core.HomeAssistant, config: dict, asy
 	async_add_entities(blinds_entities)
 
 	return True
+
+
+async def exposed_devices(**kwds):
+	windows = await get_windows(**kwds)
+
+	blinds_entities = {
+		f"{DOMAIN_COVER}.{window_slug}_{DATA_BLINDS}": {
+			DATA_FULL_NAME: window_data[DATA_BLINDS][DATA_FULL_NAME],
+			DATA_ROOM: window_data[DATA_BLINDS][DATA_ROOM_WITH_FREE_ACCESS],
+			DATA_SHORT_NAME: window_data[DATA_BLINDS][DATA_SHORT_NAME],
+			DATA_SIRI: False, # TODO: WIP
+		} for window_slug, window_data in windows.items()
+	}
+
+	return {
+		**blinds_entities,
+	}
