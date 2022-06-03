@@ -1,0 +1,98 @@
+"Registered every room with the home automation and security system"
+
+from custom_components.custom_backend.const import (
+	DATA_IS_OUTSIDE,
+	DATA_ZONE,
+	ROOM_BACKYARD,
+	ROOM_BAKA_S_BEDROOM,
+	ROOM_BASEMENT,
+	ROOM_BATHROOM,
+	ROOM_DRIVEWAY,
+	ROOM_EAST_YARD,
+	ROOM_FRONT_ROOM,
+	ROOM_FRONT_YARD,
+	ROOM_GARAGE,
+	ROOM_HALLWAY,
+	ROOM_JACOB_S_BEDROOM,
+	ROOM_JENNA_S_BEDROOM,
+	ROOM_KITCHEN,
+	ROOM_LAUNDRY_ROOM,
+	ROOM_MATT_S_BEDROOM,
+	ROOM_WEST_YARD,
+	ZONE_BAKA_S_HOUSE,
+)
+
+async def get_rooms(**kwds):
+	rooms = {
+		ROOM_BACKYARD: {
+			DATA_IS_OUTSIDE: True,
+			DATA_ZONE: ZONE_BAKA_S_HOUSE,
+		},
+		ROOM_BAKA_S_BEDROOM: {
+			DATA_IS_OUTSIDE: False,
+			DATA_ZONE: ZONE_BAKA_S_HOUSE,
+		},
+		ROOM_BASEMENT: {
+			DATA_IS_OUTSIDE: False,
+			DATA_ZONE: ZONE_BAKA_S_HOUSE,
+		},
+		ROOM_BATHROOM: {
+			DATA_IS_OUTSIDE: False,
+			DATA_ZONE: ZONE_BAKA_S_HOUSE,
+		},
+		ROOM_DRIVEWAY: {
+			DATA_IS_OUTSIDE: True,
+			DATA_ZONE: ZONE_BAKA_S_HOUSE,
+		},
+		ROOM_EAST_YARD: {
+			DATA_IS_OUTSIDE: True,
+			DATA_ZONE: ZONE_BAKA_S_HOUSE,
+		},
+		ROOM_FRONT_ROOM: {
+			DATA_IS_OUTSIDE: False,
+			DATA_ZONE: ZONE_BAKA_S_HOUSE,
+		},
+		ROOM_FRONT_YARD: {
+			DATA_IS_OUTSIDE: True,
+			DATA_ZONE: ZONE_BAKA_S_HOUSE,
+		},
+		ROOM_GARAGE: {
+			# TODO: true if garage door open else false
+			DATA_IS_OUTSIDE: False,
+			DATA_ZONE: ZONE_BAKA_S_HOUSE,
+		},
+		ROOM_HALLWAY: {
+			DATA_IS_OUTSIDE: False,
+			DATA_ZONE: ZONE_BAKA_S_HOUSE,
+		},
+		ROOM_JACOB_S_BEDROOM: {
+			DATA_IS_OUTSIDE: False,
+			DATA_ZONE: ZONE_BAKA_S_HOUSE,
+		},
+		ROOM_JENNA_S_BEDROOM: {
+			DATA_IS_OUTSIDE: False,
+			DATA_ZONE: ZONE_BAKA_S_HOUSE,
+		},
+		ROOM_KITCHEN: {
+			DATA_IS_OUTSIDE: False,
+			DATA_ZONE: ZONE_BAKA_S_HOUSE,
+		},
+		ROOM_LAUNDRY_ROOM: {
+			DATA_IS_OUTSIDE: False,
+			DATA_ZONE: ZONE_BAKA_S_HOUSE,
+		},
+		ROOM_MATT_S_BEDROOM: {
+			DATA_IS_OUTSIDE: False,
+			DATA_ZONE: ZONE_BAKA_S_HOUSE,
+		},
+		ROOM_WEST_YARD: {
+			DATA_IS_OUTSIDE: True,
+			DATA_ZONE: ZONE_BAKA_S_HOUSE,
+		},
+	}
+
+	for room_data in rooms.values():
+		room_data.setdefault(DATA_IS_OUTSIDE, False)
+		room_data.setdefault(DATA_ZONE, ZONE_BAKA_S_HOUSE)
+
+	return rooms
