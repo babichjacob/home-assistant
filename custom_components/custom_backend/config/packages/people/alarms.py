@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from logging import getLogger
 
 from homeassistant import core
-from homeassistant.helpers.event import async_track_point_in_time, async_track_state_change
+from homeassistant.helpers.event import async_track_point_in_time
 
 from custom_components.custom_backend.const import (
 	CONF_DATETIME,
@@ -18,6 +18,7 @@ from custom_components.custom_backend.const import (
 	CONF_NAME,
 	CONF_STEP,
 	CONF_UNIT_OF_MEASUREMENT,
+	CONF_VALUE,
 	DATA_ALARM,
 	DATA_AUDIO,
 	DATA_BEDTIME_SHIFT,
@@ -48,6 +49,7 @@ from custom_components.custom_backend.const import (
 	PRIORITY_LOW,
 	PRIORITY_URGENT,
 	PUSH_SOUND_ALARM_NIGHTSTAND_HAPTIC,
+	SERVICE_SET_VALUE,
 	TIME_FORMAT_INPUT_DATETIME,
 	SERVICE_SET_DATETIME,
 	TIME_FORMAT_PRETTY_DATE,
@@ -55,6 +57,8 @@ from custom_components.custom_backend.const import (
 	TIME_FORMAT_PRETTY_TIME_ON_DATE,
 	UNIT_OF_MEASUREMENT_MINUTE,
 )
+from custom_components.custom_backend.utils import entity_state_to_readable_store, window
+
 from custom_components.custom_backend.config.packages.notify import notify
 
 
@@ -68,7 +72,7 @@ def filter_to_people_with_alarms(people):
 
 
 async def generate_yaml(**kwds):
-	people = kwds["people"]
+	people = kwds[DATA_PEOPLE]
 
 	people_with_alarms = filter_to_people_with_alarms(people)
 
@@ -125,7 +129,7 @@ async def generate_yaml(**kwds):
 
 
 async def async_setup(hass: core.HomeAssistant, config: dict, **kwds) -> bool:
-	people = kwds["people"]
+	people = kwds[DATA_PEOPLE]
 
 	people_with_alarms = filter_to_people_with_alarms(people)
 
@@ -155,7 +159,6 @@ async def async_setup(hass: core.HomeAssistant, config: dict, **kwds) -> bool:
 
 		next_alarm_entity_id = f"{DOMAIN_INPUT_DATETIME}.{person_slug}_{DATA_NEXT_ALARM}"
 
-		_LOGGER.warning(f"setting {person_slug}'s next alarm to {next_alarm_datetime}")
 		await hass.services.async_call(DOMAIN_INPUT_DATETIME, SERVICE_SET_DATETIME, {
 			CONF_ENTITY_ID: next_alarm_entity_id,
 			CONF_DATETIME: next_alarm_datetime.strftime(TIME_FORMAT_INPUT_DATETIME),
@@ -166,7 +169,6 @@ async def async_setup(hass: core.HomeAssistant, config: dict, **kwds) -> bool:
 		last_alarm_datetime = datetime.strptime(last_alarm, TIME_FORMAT_INPUT_DATETIME)
 
 		if last_alarm_datetime < point_in_time:
-			_LOGGER.warning(f"setting {person_slug}'s last alarm to {point_in_time}")
 			await hass.services.async_call(DOMAIN_INPUT_DATETIME, SERVICE_SET_DATETIME, {
 				CONF_ENTITY_ID: last_alarm_entity_id,
 				CONF_DATETIME: point_in_time.strftime(TIME_FORMAT_INPUT_DATETIME),
@@ -189,6 +191,12 @@ async def async_setup(hass: core.HomeAssistant, config: dict, **kwds) -> bool:
 		else:
 			_LOGGER.warning(f"there was already an alarm earlier today for {person_slug} (at {first_alarm_today_datetime}) -- don't change it")
 		
+		if this_is_the_first_alarm_today or missed:
+			await hass.services.async_call(DOMAIN_INPUT_NUMBER, SERVICE_SET_VALUE, {
+				CONF_ENTITY_ID: f"{DOMAIN_INPUT_NUMBER}.{person_slug}_{DATA_BEDTIME_SHIFT}",
+				CONF_VALUE: 0,
+			}, blocking=True)
+
 		
 		notify_args = {}
 		if missed:
@@ -235,7 +243,6 @@ async def async_setup(hass: core.HomeAssistant, config: dict, **kwds) -> bool:
 	
 
 	def update_next_alarm_listener(*, next_alarm_datetime, person_slug):
-		# _LOGGER.warning(f"next_alarm_datetime for {person_slug}: {next_alarm_datetime}")
 		actual_alarm_time_for_person[person_slug] = next_alarm_datetime
 		# TODO: replace with regular asyncio methods because home assistant's method is difficult to work with
 		async_track_point_in_time(hass=hass, action=lambda point_in_time: hass.async_create_task(alarm_going_off(point_in_time=point_in_time, person_slug=person_slug)), point_in_time=next_alarm_datetime)
@@ -262,11 +269,12 @@ async def async_setup(hass: core.HomeAssistant, config: dict, **kwds) -> bool:
 
 	async def setup_automations(event):
 		for person_slug in people_with_alarms:
-			async_track_state_change(hass=hass, entity_ids=[f"{DOMAIN_INPUT_DATETIME}.{person_slug}_{DATA_NEXT_ALARM}"], action=lambda entity_id, from_state, to_state, *, person_slug=person_slug: hass.async_create_task(next_alarm_is_newly_set(next_alarm_datetime=datetime.strptime(to_state.state, TIME_FORMAT_INPUT_DATETIME), person_slug=person_slug)))
+			next_alarm_entity_id = f"{DOMAIN_INPUT_DATETIME}.{person_slug}_{DATA_NEXT_ALARM}"
 
-			next_alarm_state_object = hass.states.get(f"{DOMAIN_INPUT_DATETIME}.{person_slug}_{DATA_NEXT_ALARM}")
-			next_alarm_datetime = datetime.strptime(next_alarm_state_object.state, TIME_FORMAT_INPUT_DATETIME)
+			next_alarm_store = entity_state_to_readable_store(next_alarm_entity_id, hass=hass)
+			[get_next_alarm, _subscribe_to_next_alarm] = next_alarm_store
 
+			next_alarm_datetime = datetime.strptime(get_next_alarm().state, TIME_FORMAT_INPUT_DATETIME)
 			now = datetime.now()
 			if next_alarm_datetime < now:
 				_LOGGER.warning(f"startup: missed {person_slug}'s alarm!")
@@ -274,7 +282,11 @@ async def async_setup(hass: core.HomeAssistant, config: dict, **kwds) -> bool:
 			else:
 				_LOGGER.warning(f"startup: {person_slug}'s alarm hasn't happened yet; will track it for {next_alarm_datetime}")
 				update_next_alarm_listener(next_alarm_datetime=next_alarm_datetime, person_slug=person_slug)
+			
+			next_alarm_changes = window(next_alarm_store, 2)
+
+			[_get_next_alarm_window, subscribe_to_next_alarm_changes] = next_alarm_changes
+			subscribe_to_next_alarm_changes(lambda *, get_next_alarm=get_next_alarm, person_slug=person_slug: hass.async_create_task(next_alarm_is_newly_set(next_alarm_datetime=datetime.strptime(get_next_alarm().state, TIME_FORMAT_INPUT_DATETIME), person_slug=person_slug)))
 
 	hass.bus.async_listen(EVENT_TYPE_HOMEASSISTANT_START, setup_automations)
-	
 	return True
