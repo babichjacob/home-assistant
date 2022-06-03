@@ -2,7 +2,7 @@
 
 
 from custom_components.custom_backend.const import BROWSER_MOBILE_APP, DATA_BROWSERS, DATA_BROWSER_MOD, DATA_FULL_NAME, DATA_NICKNAME, DATA_OSES, DATA_PHOTO, DATA_SLUG, DEVICE_TYPE_TABLET, OS_IOS, TABLET_MATT_S_2015_IPAD_PRO
-from custom_components.custom_backend.config.packages.computers import add_device_trackers_to_recorder, get_customize_for_browser_mod, get_customize_for_mobile_app
+from custom_components.custom_backend.config.packages.computers import add_gps_device_trackers_to_recorder, get_customize_for_browser_mod, get_customize_for_mobile_app
 
 
 async def get_tablets(**kwds):
@@ -34,7 +34,7 @@ async def generate_yaml(**kwds):
 	tablets = await get_tablets(**kwds)
 
 	return {
-		**add_device_trackers_to_recorder(tablets),
+		**add_gps_device_trackers_to_recorder(tablets),
 	}
 
 

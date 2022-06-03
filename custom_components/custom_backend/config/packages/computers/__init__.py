@@ -1,19 +1,21 @@
 "Registered all the computers with the home automation and security system"
 
 
-from custom_components.custom_backend.const import ATTR_ENTITY_PICTURE, ATTR_FRIENDLY_NAME, ATTR_ICON, BROWSER_CHROME, BROWSER_FIREFOX, BROWSER_MOBILE_APP, COMPUTER_JACOB_S_DESKTOP, COMPUTER_JACOB_S_SCHOOL_LAPTOP, CONF_ENTITIES, CONF_INCLUDE, DATA_BROWSERS, DATA_BROWSER_MOD, DEVICE_TYPE_COMPUTER, DATA_FULL_NAME, DATA_NICKNAME, DATA_OSES, DEVICE_TYPE_PHONE, DATA_PHOTO, DATA_SLUG, DEVICE_TYPE_TABLET, DOMAIN_DEVICE_TRACKER, DOMAIN_RECORDER, DOMAIN_SENSOR, DOMAIN_LIGHT, DOMAIN_MEDIA_PLAYER, ICON_MDI_CELLPHONE, ICON_MDI_CELLPHONE_SOUND, ICON_MDI_CELLPHONE_TEXT, ICON_MDI_MONITOR_DASHBOARD, ICON_MDI_MONITOR_EYE, ICON_MDI_MONITOR_SPEAKER, ICON_MDI_TABLET, ICON_MDI_TABLET_DASHBOARD, OS_MACOS, OS_WINDOWS
+from custom_components.custom_backend.const import ATTR_ENTITY_PICTURE, ATTR_FRIENDLY_NAME, ATTR_ICON, BROWSER_CHROME, BROWSER_FIREFOX, BROWSER_MOBILE_APP, COMPUTER_JACOB_S_DESKTOP, COMPUTER_JACOB_S_SCHOOL_LAPTOP, CONF_ENTITIES, CONF_INCLUDE, DATA_BROWSERS, DATA_BROWSER_MOD, DATA_SECRETS, DEVICE_TYPE_COMPUTER, DATA_FULL_NAME, DATA_NICKNAME, DATA_OSES, DEVICE_TYPE_PHONE, DATA_PHOTO, DATA_SLUG, DEVICE_TYPE_TABLET, DOMAIN_DEVICE_TRACKER, DOMAIN_RECORDER, DOMAIN_SENSOR, DOMAIN_LIGHT, DOMAIN_MEDIA_PLAYER, ICON_MDI_CELLPHONE, ICON_MDI_CELLPHONE_SOUND, ICON_MDI_CELLPHONE_TEXT, ICON_MDI_MONITOR_DASHBOARD, ICON_MDI_MONITOR_EYE, ICON_MDI_MONITOR_SPEAKER, ICON_MDI_TABLET, ICON_MDI_TABLET_DASHBOARD, OS_MACOS, OS_WINDOWS
 from custom_components.custom_backend.utils import slugify
 
 
+# TODO: identify loose browser_mod device id e5fe0b23-15a106e2
 async def get_computers(**kwds):
-	secrets = kwds["secrets"]
-
 	computers = {
 		COMPUTER_JACOB_S_DESKTOP: {
 			DATA_NICKNAME: "Jacob's Desktop",
 			DATA_OSES: {
 				OS_MACOS: {
 					DATA_BROWSERS: {
+						BROWSER_CHROME: {
+							DATA_BROWSER_MOD: "7abcadab-b52fc99f",
+						},
 						BROWSER_FIREFOX: {
 							DATA_BROWSER_MOD: "aa0c9f87-c05b07de",
 						},
@@ -24,7 +26,11 @@ async def get_computers(**kwds):
 					}
 				},
 				OS_WINDOWS: {
-					DATA_BROWSERS: {},
+					DATA_BROWSERS: {
+						BROWSER_CHROME: {
+							DATA_BROWSER_MOD: "f6c8d040-f71baebb",
+						},
+					},
 				},
 			},
 		},
@@ -34,9 +40,7 @@ async def get_computers(**kwds):
 				OS_WINDOWS: {
 					DATA_BROWSERS: {
 						BROWSER_CHROME: {
-							# TODO: which is correct? what happened here?
-							# DATA_BROWSER_MOD: "73977112-42a4b5ef",
-							DATA_BROWSER_MOD: "f6c8d040-f71baebb",
+							DATA_BROWSER_MOD: "73977112-42a4b5ef",
 						},
 						BROWSER_FIREFOX: {
 							DATA_BROWSER_MOD: "39849e3d-123aba1d",
@@ -111,13 +115,12 @@ def get_customize_for_mobile_app(devices):
 	return {
 		f"{DOMAIN_DEVICE_TRACKER}.{browser_data[DATA_SLUG]}": {
 			ATTR_ENTITY_PICTURE: device_data[DATA_PHOTO],
-			ATTR_FRIENDLY_NAME: f"{device_data[DATA_FULL_NAME]} {os_name} Mobile App",
+			ATTR_FRIENDLY_NAME: f"{device_data[DATA_FULL_NAME]} {os_name} Mobile App Location",
 		} for device_data in devices.values() for os_name, os_data in device_data[DATA_OSES].items() for browser_name, browser_data in os_data[DATA_BROWSERS].items() if browser_name == BROWSER_MOBILE_APP
 	}
 
 
-
-def add_device_trackers_to_recorder(devices):
+def add_gps_device_trackers_to_recorder(devices):
 	return {
 		DOMAIN_RECORDER: {
 			CONF_INCLUDE: {
@@ -131,7 +134,7 @@ async def generate_yaml(**kwds):
 	computers = await get_computers(**kwds)
 
 	return {
-		**add_device_trackers_to_recorder(computers),
+		**add_gps_device_trackers_to_recorder(computers),
 	}
 
 
