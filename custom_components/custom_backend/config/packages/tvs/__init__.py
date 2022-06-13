@@ -84,7 +84,7 @@ async def get_tvs(**kwds):
 				DATA_HOST: secrets["roku_5_host"],
 				DATA_IS_TV: False,
 			},
-			DATA_ROOM: ROOM_JENNA_S_BEDROOM,
+			DATA_ROOM: ROOM_BACKYARD,
 		},
 		"matt_s_bedroom": {
 			DATA_ROKU: {
